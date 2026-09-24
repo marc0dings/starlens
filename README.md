@@ -1,56 +1,92 @@
-# Welcome to your Expo app 👋
+# StarLens ✦
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+StarLens ist eine App rund um den Nachthimmel: Sternbilder und Planeten per Kamera live erkennen, in einem Lexikon nachlesen, als „gesehen“ markieren und auf einer interaktiven Sternkarte erkunden.
 
-## Get started
+Gebaut mit [Expo](https://expo.dev) (Expo Router, React Native, TypeScript).
 
-1. Install dependencies
+## Bereiche der App
 
-   ```bash
-   npm install
-   ```
+- **Start** – animierter Hub-Bildschirm mit Zugang zu den drei Bereichen und dem persönlichen Fortschritt (wie viele Sternbilder schon entdeckt wurden).
+- **Himmel** – hält man die Kamera auf den Nachthimmel, zeigt ein AR-Overlay live, welche Sternbilder und Planeten gerade in Blickrichtung stehen. Basiert auf Kompass (`expo-location`), Neigungssensor (`expo-sensors`) und echten astronomischen Berechnungen (`astronomy-engine`) – **keine** Bilderkennung im Kamerabild, sondern eine sensorgestützte Positionsberechnung, wie sie auch andere Astronomie-Apps verwenden.
+- **Lexikon** – Sternbilder, Planeten (inkl. Sonne & Mond) und allgemeine Astronomie-Themen mit Kurztexten, Fakten und generierter SVG-Illustration.
+- **Karte** – frei zoom- und schwenkbare Sternkarte des kompletten Katalogs. Antippen hebt ein Sternbild hervor und zeigt Details dazu.
+- **Gesehen-Tracking** – Sternbilder lassen sich als „gesehen“ markieren; der Status bleibt über `AsyncStorage` geräteweit erhalten.
 
-2. Start the app
+## Tech-Stack
 
-   ```bash
-   npx expo start
-   ```
+- [Expo](https://expo.dev) (SDK 57) mit [Expo Router](https://docs.expo.dev/router/introduction/) (File-based Routing, native Tabs)
+- React Native + TypeScript, React Compiler aktiviert
+- `react-native-svg` für Sternbild-Grafiken, Planeten-Icons und die Sternkarte
+- `react-native-reanimated` + `react-native-gesture-handler` für Animationen sowie Pan/Pinch/Tap auf der Karte
+- `astronomy-engine` für Alt/Az-Berechnungen von Sternen und Planeten
+- `expo-camera`, `expo-location`, `expo-sensors` für die AR-Himmelsansicht
+- `@react-native-async-storage/async-storage` für die „gesehen“-Persistenz
 
-In the output, you'll find options to open the app in a
+## Loslegen
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Voraussetzung: Node.js sowie die [Expo-CLI-Umgebung](https://docs.expo.dev/get-started/installation/).
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Danach in der Ausgabe wählen: [Expo Go](https://expo.dev/go), Android-Emulator, iOS-Simulator oder Web (`w` drücken). Kamera, Standort und Sensoren funktionieren laut Expo-Dokumentation auch in Expo Go – für den Himmel-Tab ist also kein Custom-Dev-Build nötig.
 
-### Other setup steps
+Beim ersten Öffnen des Himmel-Tabs fragt die App nach Kamera- und Standortzugriff; ohne beide Berechtigungen zeigt der Tab stattdessen einen Hinweisbildschirm mit einem Link zu den Systemeinstellungen.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### Nützliche Skripte
 
-## Learn more
+```bash
+npx expo lint        # ESLint
+npx tsc --noEmit      # TypeScript-Typecheck
+npx expo-doctor       # Projekt-/Abhängigkeits-Diagnose
+npx expo install --fix  # inkompatible Paketversionen korrigieren
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Vor jedem Abschluss einer Änderung sollten Lint und Typecheck sauber durchlaufen (siehe `AGENTS.md`).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Projektstruktur
 
-## Join the community
+```
+src/
+  app/                     Expo-Router-Screens (jede Datei = eine Route)
+    index.tsx              Start-Hub
+    sky.tsx                Himmel (AR-Kameraansicht)
+    library/                Lexikon (Liste + Detailrouten)
+      index.tsx
+      constellation/[id].tsx
+      planet/[id].tsx
+      topic/[id].tsx
+    map/index.tsx           Interaktive Sternkarte
+  components/               Wiederverwendbare UI-Bausteine
+    star-field-background.tsx   Animierter Sternenhimmel-Hintergrund
+    constellation-svg.tsx       Sternbild-Illustration aus Katalogdaten
+    planet-svg.tsx              Generierte Planeten-Grafik
+    detail-sheet.tsx            Bottom-Sheet für Karte & Himmel
+    app-tabs.tsx / app-tabs.web.tsx   Tab-Navigation (nativ bzw. Web)
+  data/                     Statische Inhalte (Deutsch)
+    constellations.ts       Sternbild-Katalog (Sterne, Linien, Mythologie)
+    planets.ts               Planeten/Sonne/Mond
+    topics.ts                 Astronomie-Artikel
+  lib/
+    astronomy.ts             Alt/Az-Berechnungen, Bildschirmprojektion
+    star-chart.ts             Projektion für die Weltkarte
+  store/
+    seen-store.tsx            „Gesehen“-Status inkl. AsyncStorage-Persistenz
+  constants/theme.ts          Durchgehend dunkles „Night“-Farbschema
+```
 
-Join our community of developers creating universal apps.
+## Bekannte Einschränkungen
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **App-Icon & Splash-Grafik** sind noch Platzhalter aus dem Expo-Starter-Template (`assets/images/icon.png`, `splash-icon.png`, Android-Adaptive-Icon) – finale Bildassets fehlen noch.
+- **Sternkatalog-Koordinaten** sind auf ca. 1° genau (aus Modellwissen, keine Live-Ephemeride) – für Kartendarstellung und AR-Pointing ausreichend, aber keine professionelle Astrometrie.
+- Die **Neigungsberechnung** im Himmel-Tab (`sky.tsx`) berücksichtigt aktuell nicht die Roll-Achse des Geräts.
+- **Pan/Zoom auf der Karte** ist nicht gegen die Kartengrenzen geklammert – man kann theoretisch in den leeren Bereich navigieren.
+- Schnelles, mehrfaches Umschalten des „gesehen“-Status kann durch nicht sequenzierte `AsyncStorage`-Schreibvorgänge in einer Race Condition enden.
+
+Diese Punkte stehen als priorisiertes Backlog aus dem letzten Team-Review fest (siehe Git-Historie bzw. `.claude/workflows/starlens-sprint.js` für den Review-Workflow, der sie aufgedeckt hat).
+
+## Lizenz
+
+MIT, siehe [`LICENSE`](./LICENSE).
