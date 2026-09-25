@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { useIsFocused } from 'expo-router';
 import { DeviceMotion } from 'expo-sensors';
 import { Fragment, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 import { DetailSheet } from '@/components/detail-sheet';
@@ -93,6 +93,9 @@ function SkyView() {
   const [skyObjects, setSkyObjects] = useState<SkyObject[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [manualQuery, setManualQuery] = useState('');
+  const [manualSearching, setManualSearching] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
 
   // Pauses camera, sensors and GPS the moment the Himmel tab loses focus (the
   // native tab bar keeps every tab mounted, so without this it would keep
@@ -136,6 +139,26 @@ function SkyView() {
       motionSubscription.remove();
     };
   }, [locationAttempt, isFocused]);
+
+  async function searchManualLocation() {
+    const query = manualQuery.trim();
+    if (!query) return;
+    setManualSearching(true);
+    setManualError(null);
+    try {
+      const results = await Location.geocodeAsync(query);
+      if (results.length === 0) {
+        setManualError('Kein Ort gefunden.');
+        return;
+      }
+      setLocation({ latitude: results[0].latitude, longitude: results[0].longitude });
+      setLocationError(false);
+    } catch {
+      setManualError('Suche fehlgeschlagen.');
+    } finally {
+      setManualSearching(false);
+    }
+  }
 
   useEffect(() => {
     if (!location || !isFocused) return;
@@ -329,9 +352,26 @@ function SkyView() {
                 : 'Standort wird ermittelt …'}
           </Text>
           {locationError && (
-            <Pressable style={styles.retryButton} onPress={() => setLocationAttempt((n) => n + 1)}>
-              <Text style={styles.retryButtonText}>Erneut versuchen</Text>
-            </Pressable>
+            <View style={styles.locationFallback}>
+              <Pressable style={styles.retryButton} onPress={() => setLocationAttempt((n) => n + 1)}>
+                <Text style={styles.retryButtonText}>Erneut versuchen</Text>
+              </Pressable>
+              <View style={styles.manualRow}>
+                <TextInput
+                  style={styles.manualInput}
+                  placeholder="Oder Stadt eingeben"
+                  placeholderTextColor={Night.textMuted}
+                  value={manualQuery}
+                  onChangeText={setManualQuery}
+                  onSubmitEditing={searchManualLocation}
+                  returnKeyType="search"
+                />
+                <Pressable style={styles.manualButton} onPress={searchManualLocation} disabled={manualSearching}>
+                  <Text style={styles.manualButtonText}>{manualSearching ? '…' : 'Suchen'}</Text>
+                </Pressable>
+              </View>
+              {manualError && <Text style={styles.manualErrorText}>{manualError}</Text>}
+            </View>
           )}
         </View>
       </View>
@@ -400,9 +440,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  locationFallback: {
+    marginTop: Spacing.two,
+    gap: Spacing.two,
+  },
   retryButton: {
     alignSelf: 'flex-start',
-    marginTop: Spacing.two,
     backgroundColor: Night.accent,
     borderRadius: Spacing.five,
     paddingVertical: Spacing.one,
@@ -412,6 +455,40 @@ const styles = StyleSheet.create({
     color: Night.bg0,
     fontWeight: '700',
     fontSize: 12,
+  },
+  manualRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignItems: 'center',
+  },
+  manualInput: {
+    flex: 1,
+    minWidth: 140,
+    color: Night.text,
+    fontSize: 13,
+    backgroundColor: Night.surface,
+    borderRadius: Spacing.five,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Night.border,
+  },
+  manualButton: {
+    backgroundColor: Night.surfaceStrong,
+    borderRadius: Spacing.five,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Night.border,
+  },
+  manualButtonText: {
+    color: Night.text,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  manualErrorText: {
+    color: Night.gold,
+    fontSize: 11,
   },
   permissionGate: {
     flex: 1,
