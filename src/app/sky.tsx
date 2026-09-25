@@ -1,5 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
+import { useIsFocused } from 'expo-router';
 import { DeviceMotion } from 'expo-sensors';
 import { Fragment, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -82,6 +83,7 @@ export default function SkyScreen() {
 function SkyView() {
   const { width, height } = useWindowDimensions();
   const { isSeen, toggleSeen } = useSeen();
+  const isFocused = useIsFocused();
 
   const [location, setLocation] = useState<GeoPosition | null>(null);
   const [locationError, setLocationError] = useState(false);
@@ -92,7 +94,13 @@ function SkyView() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
 
+  // Pauses camera, sensors and GPS the moment the Himmel tab loses focus (the
+  // native tab bar keeps every tab mounted, so without this it would keep
+  // burning battery and holding the camera hardware while the user is on
+  // another tab).
   useEffect(() => {
+    if (!isFocused) return;
+
     let cancelled = false;
     let headingSubscription: Location.LocationSubscription | undefined;
 
@@ -127,10 +135,10 @@ function SkyView() {
       headingSubscription?.remove();
       motionSubscription.remove();
     };
-  }, [locationAttempt]);
+  }, [locationAttempt, isFocused]);
 
   useEffect(() => {
-    if (!location) return;
+    if (!location || !isFocused) return;
 
     function recompute() {
       if (!location) return;
@@ -163,7 +171,7 @@ function SkyView() {
     recompute();
     const interval = setInterval(recompute, RECOMPUTE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [location]);
+  }, [location, isFocused]);
 
   const pxPerDeg = width / FOV_DEGREES;
 
@@ -203,7 +211,11 @@ function SkyView() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      {isFocused ? (
+        <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: Night.bg0 }]} />
+      )}
 
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
         {constellations.map((constellation) => {
