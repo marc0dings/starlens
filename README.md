@@ -40,6 +40,7 @@ Beim ersten Öffnen des Himmel-Tabs fragt die App nach Kamera- und Standortzugri
 ```bash
 npx expo lint        # ESLint
 npx tsc --noEmit      # TypeScript-Typecheck
+npm test              # Jest — u. a. Astronomie-Berechnungen & Seen-Store
 npx expo-doctor       # Projekt-/Abhängigkeits-Diagnose
 npx expo install --fix  # inkompatible Paketversionen korrigieren
 ```
